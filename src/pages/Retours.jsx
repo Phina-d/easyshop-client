@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 
 export default function UsersTablesPage() {
   // Exemple de données utilisateurs simulées (à remplacer par ton API)
-  const [users, setUsers] = useState([
+  const [users] = useState([
     {
       _id: "1",
       name: "Alioune",
