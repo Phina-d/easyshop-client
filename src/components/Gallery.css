@@ -1,13 +1,13 @@
 .gallery-section {
-  background-color: #f3f4f6;
+  background-color: #f9fafb;
   padding: 2.5rem 1rem;
 }
 
 .gallery-title {
-  font-size: 1.875rem; /* text-3xl */
+  font-size: 1.875rem;
   font-weight: 700;
   text-align: center;
-  color: #7e22ce; /* text-purple-700 */
+  color: #1e3a8a; /* text-blue-900 */
   margin-bottom: 2.5rem;
 }
 
@@ -37,7 +37,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #e5e7eb;
+  background-color: #dbeafe; /* light blue */
   overflow: hidden;
 }
 
@@ -53,12 +53,9 @@
 }
 
 .card-content p {
-  color: #4b5563;
+  color: #1e40af; /* text-blue-800 */
 }
 
 .card-content .category {
-  margin-top: 0.25rem;
-  font-size: 0.875rem;
-  font-style: italic;
-  color: #7c3aed;
+  color: #2563eb; /* text-blue-600 */
 }

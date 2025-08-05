@@ -1,10 +1,7 @@
-import React, { useEffect, useState } from "react";
-import {
-  getAllProducts,
-  createProduct,
-  updateProduct,
-  deleteProduct,
-} from "../services/productService";
+import React, { useState, useEffect, useCallback } from "react";
+import axios from "axios";
+
+const API_URL = "http://localhost:5000/api/products";
 
 export default function AdminProduits() {
   const [products, setProducts] = useState([]);
@@ -15,46 +12,71 @@ export default function AdminProduits() {
     name: "",
     price: "",
     description: "",
-    image: "",
+    imageFile: null,
   });
 
-  const token = localStorage.getItem("token");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API_URL}?page=${page}&limit=15`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setProducts(res.data.products);
+      setTotalPages(res.data.totalPages);
+      setError(null);
+    } catch (err) {
+      setError("Erreur lors du chargement des produits");
+      console.error("Erreur fetchProducts:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [page]); // ⚠️ 'page' est nécessaire ici
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const data = await getAllProducts(token);
-        setProducts(data);
-      } catch (err) {
-        setError("Erreur lors du chargement des produits");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, [token]);
+  fetchProducts();
+}, [fetchProducts]);
 
   const handleChange = (e) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    if (e.target.name === "imageFile") {
+      setFormData((prev) => ({ ...prev, imageFile: e.target.files[0] }));
+    } else {
+      setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const formDataToSend = new FormData();
+    formDataToSend.append("name", formData.name);
+    formDataToSend.append("price", formData.price);
+    formDataToSend.append("description", formData.description);
+    if (formData.imageFile) formDataToSend.append("image", formData.imageFile);
+
     try {
+      const token = localStorage.getItem("token");
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      };
+
       if (editingProduct) {
-        await updateProduct(editingProduct._id, formData, token);
+        await axios.put(`${API_URL}/${editingProduct._id}`, formDataToSend, config);
       } else {
-        await createProduct(formData, token);
+        await axios.post(API_URL, formDataToSend, config);
       }
-      setFormData({ name: "", price: "", description: "", image: "" });
+
+      setFormData({ name: "", price: "", description: "", imageFile: null });
       setEditingProduct(null);
-      // recharge la liste après modif/ajout
-      const data = await getAllProducts(token);
-      setProducts(data);
-      setError(null);
-    } catch {
+      fetchProducts();
+    } catch (err) {
       alert("Erreur lors de l'enregistrement");
+      console.error(err);
     }
   };
 
@@ -64,34 +86,40 @@ export default function AdminProduits() {
       name: product.name,
       price: product.price,
       description: product.description,
-      image: product.image,
+      imageFile: null,
     });
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Supprimer ce produit ?")) return;
+    if (!window.confirm("Voulez-vous supprimer ce produit ?")) return;
     try {
-      await deleteProduct(id, token);
-      const data = await getAllProducts(token);
-      setProducts(data);
-    } catch {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${API_URL}/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchProducts();
+    } catch (err) {
+      console.error("Erreur handleDelete:", err);
       alert("Erreur lors de la suppression");
     }
   };
 
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-4">Gestion des Produits</h2>
+    <div className="max-w-5xl mx-auto p-6">
+      <h1 className="text-3xl font-bold text-center mb-8">Gestion des Produits</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-3 bg-gray-100 p-4 rounded-lg">
+      <form
+        onSubmit={handleSubmit}
+        className="grid grid-cols-1 gap-4 mb-10 bg-white p-6 rounded shadow"
+      >
         <input
           type="text"
           name="name"
-          placeholder="Nom"
+          placeholder="Nom du produit"
           value={formData.name}
           onChange={handleChange}
-          className="border p-2 w-full"
           required
+          className="border rounded px-4 py-2"
         />
         <input
           type="number"
@@ -99,65 +127,109 @@ export default function AdminProduits() {
           placeholder="Prix"
           value={formData.price}
           onChange={handleChange}
-          className="border p-2 w-full"
           required
+          className="border rounded px-4 py-2"
         />
-        <input
-          type="text"
+        <textarea
           name="description"
           placeholder="Description"
           value={formData.description}
           onChange={handleChange}
-          className="border p-2 w-full"
+          rows={3}
+          className="border rounded px-4 py-2"
         />
         <input
-          type="text"
-          name="image"
-          placeholder="URL Image"
-          value={formData.image}
+          type="file"
+          name="imageFile"
           onChange={handleChange}
-          className="border p-2 w-full"
+          accept="image/*"
+          className="border px-4 py-2"
         />
-        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
-          {editingProduct ? "Mettre à jour" : "Ajouter"}
-        </button>
+
+        <div className="flex gap-4">
+          <button
+            type="submit"
+            className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
+          >
+            {editingProduct ? "Mettre à jour" : "Ajouter"}
+          </button>
+          {editingProduct && (
+            <button
+              type="button"
+              onClick={() => {
+                setEditingProduct(null);
+                setFormData({ name: "", price: "", description: "", imageFile: null });
+              }}
+              className="bg-gray-400 text-white px-6 py-2 rounded hover:bg-gray-500"
+            >
+              Annuler
+            </button>
+          )}
+        </div>
       </form>
 
-      <hr className="my-6" />
-
       {loading ? (
-        <p>Chargement...</p>
+        <p className="text-center text-blue-600">Chargement des produits...</p>
       ) : error ? (
-        <p className="text-red-500">{error}</p>
+        <p className="text-center text-red-600">{error}</p>
+      ) : products.length === 0 ? (
+        <p className="text-center text-gray-500">Aucun produit disponible.</p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-  {products.map((product) => (
-    <div key={product._id} className="border p-4 rounded shadow text-center">
-      <img
-        src={product.image}
-        alt={product.name}
-        className="w-80 h-80 object-cover rounded mx-auto mb-2"
-      />
-      <h3 className="font-bold text-lg">{product.name}</h3>
-      <p className="text-gray-600">{product.description}</p>
-      <p className="text-green-600 font-semibold mt-1">{product.price} FCFA</p>
-      <div className="flex justify-center gap-2 mt-4">
-        <button
-          onClick={() => handleEdit(product)}
-          className="bg-yellow-400 px-3 py-1 rounded"
-        >
-          Modifier
-        </button>
-        <button
-          onClick={() => handleDelete(product._id)}
-          className="bg-red-600 text-white px-3 py-1 rounded"
-        >
-          Supprimer
-        </button>
-      </div>
-            </div>
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {products.map((p) => (
+              <div
+                key={p._id}
+                className="border rounded-lg p-4 shadow hover:shadow-lg transition duration-300 text-center bg-white"
+              >
+                {p.image && (
+                  <img
+                    src={`http://localhost:5000${p.image}`}
+                    alt={p.name}
+                    className="w-full h-48 object-cover rounded mb-3"
+                  />
+                )}
+                <h3 className="text-lg font-semibold">{p.name}</h3>
+                <p className="text-sm text-gray-600">{p.description}</p>
+                <p className="font-bold text-blue-600 mt-2">{p.price} FCFA</p>
+
+                <div className="mt-4 flex justify-center gap-4">
+                  <button
+                    onClick={() => handleEdit(p)}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+                  >
+                    Modifier
+                  </button>
+                  <button
+                    onClick={() => handleDelete(p._id)}
+                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
+                  >
+                    Supprimer
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* ✅ PAGINATION */}
+          <div className="flex justify-center items-center mt-8 gap-4">
+            <button
+              disabled={page === 1}
+              onClick={() => setPage((prev) => prev - 1)}
+              className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
+            >
+              ◀ Précédent
+            </button>
+            <span>Page {page} / {totalPages}</span>
+            <button
+              disabled={page === totalPages}
+              onClick={() => setPage((prev) => prev + 1)}
+              className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
+            >
+              Suivant ▶
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

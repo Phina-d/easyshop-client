@@ -1,15 +1,36 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useContext } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 
 export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const { login } = useContext(AuthContext);
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Ici tu pourras ajouter la logique d’inscription
-    alert(`Inscription de ${name} avec l’email ${email}`);
+
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        await login(data.token); // Connexion automatique après inscription
+        navigate("/"); // Redirection vers la page d’accueil
+      } else {
+        alert(data.message || "Erreur d'inscription");
+      }
+    } catch (err) {
+      alert("Erreur serveur, réessayez plus tard.");
+      console.error(err);
+    }
   };
 
   return (

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 
@@ -6,6 +6,11 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const { login } = useContext(AuthContext);
+
+  useEffect(() => {
+    localStorage.removeItem("token"); // Nettoyage si retour manuel
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,8 +24,8 @@ export default function Login() {
       const data = await res.json();
 
       if (res.ok) {
-        localStorage.setItem("token", data.token);
-        navigate("/");
+        await login(data.token);
+        navigate("/"); // Pas besoin de recharger la page
       } else {
         alert(data.message || "Erreur de connexion");
       }

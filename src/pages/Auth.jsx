@@ -1,130 +1,90 @@
-import React, { useContext, useState } from "react";
+import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
+import { AuthContext } from "../context/AuthContext"; // si tu as un contexte pour l'auth
 
 export default function Auth() {
-  const { login } = useContext(AuthContext);
-  const navigate = useNavigate();
-
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [username, setUsername] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    // Simule un token pour test, en vrai tu appelleras backend et récupèreras token
-    const fakeToken = "token123456";
-    login(fakeToken);
-    navigate("/"); // redirige vers accueil après login
-  };
+  const navigate = useNavigate();
+  const { setUser } = useContext(AuthContext); // optionnel, selon ton contexte
 
-  const handleRegister = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (password !== confirmPassword) {
-      alert("Les mots de passe ne correspondent pas !");
-      return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.message || "Erreur lors de la connexion");
+      }
+
+      const data = await response.json();
+
+      // data doit contenir : { user: {...}, token: "jwt..." }
+      // Sauvegarder dans localStorage
+      localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("token", data.token);
+
+      // Mise à jour du contexte (optionnel)
+      if (setUser) setUser(data.user);
+
+      // Redirection selon rôle ou simple vers accueil
+      if (data.user.role === "admin" || data.user.role === "chef" || data.user.role === "closer") {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
     }
-    // Simule un token comme si l'inscription était réussie
-    const fakeToken = "token123456";
-    login(fakeToken);
-    navigate("/"); // redirige vers accueil après inscription
   };
 
   return (
-    <div className="max-w-md mx-auto p-6 mt-10 border rounded shadow bg-white">
-      <h2 className="text-2xl font-bold mb-6 text-center">
-        {isLogin ? "Connexion" : "Inscription"}
-      </h2>
+    <div className="max-w-md mx-auto mt-20 p-6 border rounded shadow">
+      <h2 className="text-2xl font-bold mb-4 text-center">Connexion</h2>
+      <form onSubmit={handleSubmit}>
 
-      {isLogin ? (
-        <form onSubmit={handleLogin} className="flex flex-col gap-4">
-          <input
-            type="email"
-            placeholder="Email"
-            className="border px-3 py-2 rounded"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Mot de passe"
-            className="border px-3 py-2 rounded"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          <button
-            type="submit"
-            className="bg-purple-600 text-white py-2 rounded hover:bg-purple-700"
-          >
-            Se connecter
-          </button>
-          <p className="text-center text-sm">
-            Pas encore inscrit ?{" "}
-            <button
-              type="button"
-              onClick={() => setIsLogin(false)}
-              className="text-purple-600 underline"
-            >
-              Créer un compte
-            </button>
-          </p>
-        </form>
-      ) : (
-        <form onSubmit={handleRegister} className="flex flex-col gap-4">
-          <input
-            type="text"
-            placeholder="Nom d'utilisateur"
-            className="border px-3 py-2 rounded"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
-          <input
-            type="email"
-            placeholder="Email"
-            className="border px-3 py-2 rounded"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Mot de passe"
-            className="border px-3 py-2 rounded"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Confirmer le mot de passe"
-            className="border px-3 py-2 rounded"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-          />
-          <button
-            type="submit"
-            className="bg-purple-600 text-white py-2 rounded hover:bg-purple-700"
-          >
-            S'inscrire
-          </button>
-          <p className="text-center text-sm">
-            Déjà un compte ?{" "}
-            <button
-              type="button"
-              onClick={() => setIsLogin(true)}
-              className="text-purple-600 underline"
-            >
-              Se connecter
-            </button>
-          </p>
-        </form>
-      )}
+        <label htmlFor="email" className="block mb-1 font-semibold">Email</label>
+        <input
+          type="email"
+          id="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full p-2 mb-4 border rounded"
+        />
+
+        <label htmlFor="password" className="block mb-1 font-semibold">Mot de passe</label>
+        <input
+          type="password"
+          id="password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full p-2 mb-4 border rounded"
+        />
+
+        {error && <p className="text-red-600 mb-4">{error}</p>}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full py-2 bg-purple-700 text-white rounded hover:bg-purple-800 disabled:opacity-50"
+        >
+          {loading ? "Connexion..." : "Se connecter"}
+        </button>
+      </form>
     </div>
   );
 }

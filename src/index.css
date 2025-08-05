@@ -2,28 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
-/* src/index.css */
+/* Reset fond neutre */
 body {
-  @apply bg-gradient-to-tr from-purple-200 via-purple-300 to-white min-h-screen;
-  background-size: 400% 400%;
-  animation: gradientAnimation 10s ease infinite;
+  @apply bg-gray-100 text-gray-900 font-sans;
+  font-family: 'Poppins', sans-serif;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
 }
 
-@keyframes gradientAnimation {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
 @keyframes fade-in {
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
@@ -32,39 +23,25 @@ body {
 }
 
 .animate-fade-in {
-  animation: fade-in 0.7s ease-out forwards;
+  animation: fade-in 0.6s ease-out forwards;
 }
+
 @media print {
-  /* Cacher les éléments qui ont la classe no-print */
   .no-print {
     display: none !important;
   }
 
-  /* Faire en sorte que le corps prenne tout l'espace et soit blanc */
   body {
     background: white !important;
     color: black !important;
-    margin: 0;
-    padding: 0;
   }
 
-  /* Centrer la section facture et la rendre visible en impression */
   section.invoice, section.max-w-4xl {
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    box-shadow: none !important;
     background: white !important;
+    box-shadow: none !important;
   }
 
-  /* Éviter que footer ou autres éléments flottants soient visibles */
   footer, nav, header {
     display: none !important;
   }
-}
-.product-image {
-  width: 128px;
-  height: 128px;
-  object-fit: cover;
-  border-radius: 6px;
 }
